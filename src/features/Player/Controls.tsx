@@ -1,7 +1,7 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
-import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
+import { playerStore, playPrev, queueStore, setPlayerStore, t } from "@stores";
 import { convertSStoHHMMSS, setConfig } from "@utils";
-import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
+import { Accessor, onMount, Setter, Show } from "solid-js";
 
 export default function(_: {
   showLyrics: Accessor<boolean>,
@@ -10,8 +10,8 @@ export default function(_: {
   setShowQueue?: Setter<boolean>
 }) {
 
-  const [isPointed, setPointed] = createSignal(params.has('t'));
   let slider!: HTMLInputElement;
+
 
 
   onMount(() => {
@@ -130,9 +130,10 @@ export default function(_: {
           <option value="4.00">4.00x</option>
         </select>
 
-        <i
+        <button
+          type="button"
           aria-label={t('player_lyrics')}
-          class="ri-music-2-line"
+          class="lyrics-btn"
           classList={{
             on: _.showLyrics()
           }}
@@ -142,12 +143,23 @@ export default function(_: {
             if (next && _.setShowQueue) _.setShowQueue(false);
           }}
           title="Lyrics"
-        ></i>
+          style={{
+            background: _.showLyrics() ? "rgba(255, 255, 255, 0.2)" : "none",
+            border: "none",
+            color: "var(--text)",
+            "font-size": "1.25rem",
+            padding: "6px",
+            "border-radius": "8px",
+            cursor: "pointer",
+            display: "inline-flex",
+            "align-items": "center",
+            "justify-content": "center"
+          }}
+        >
+          <i class="ri-music-2-line"></i>
+        </button>
 
         <LikeButton />
-
-
-
 
         <i
           aria-label={t("player_loop")}
@@ -159,22 +171,7 @@ export default function(_: {
             setPlayerStore('loop', newLoopState);
           }}
         ></i>
-        <Show when={!playerStore.isMusic}>
-          <i
-            aria-label={t('player_save_progress')}
-            class={`ri-signpost-${isPointed() ? 'fill' : 'line'}`}
-            onclick={() => {
-              if (isPointed()) {
-                updateParam('t');
-                setPointed(false);
-              }
-              else {
-                updateParam('t', playerStore.currentTime.toString());
-                setPointed(true);
-              }
-            }}
-          ></i>
-        </Show>
+
 
         <select
           id="volumeChanger"
