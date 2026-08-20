@@ -1,0 +1,118 @@
+import { getTracksMap } from '@utils';
+import { setStore, t } from '@stores';
+import { Show } from 'solid-js';
+import { render } from 'solid-js/web';
+import { getAuthToken, logout } from '@modules/muzoAuth';
+import AuthModal from '@components/AuthModal';
+
+export default function Dropdown() {
+
+  async function importLibrary(e: Event) {
+    const importBtn = e.target as HTMLInputElement & { files: FileList };
+    const importedData = JSON.parse(await importBtn.files[0].text());
+
+    if (importedData.meta) { // Check for V2 library
+      // Deconsolidate V2 library
+      for (const key in importedData) {
+        if (importedData.hasOwnProperty(key)) {
+          localStorage.setItem('library_' + key, JSON.stringify(importedData[key]));
+        }
+      }
+      setStore('snackbar', t('library_imported')); // Reusing existing translation key
+      location.reload();
+    } else { // Assume V1 library
+      localStorage.setItem('library', JSON.stringify(importedData));
+      setStore('snackbar', t('library_migration_v1_v2'));
+      location.reload(); // Trigger migration
+    }
+  };
+
+  function exportLibrary() {
+    const link = document.createElement('a');
+    const date = new Date().toISOString().split('T')[0];
+    link.download = `ytify_library_${date}.json`;
+
+    const exportedData: { [key: string]: any } = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('library_')) {
+        exportedData[key.slice(8)] = JSON.parse(localStorage.getItem(key)!);
+      }
+    }
+
+    link.href = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(exportedData, undefined, 2))}`;
+    link.click();
+  };
+
+  function cleanLibrary() {
+    // Count items in V2 library
+    let count = 0;
+    const tracksMap = getTracksMap();
+    count = Object.keys(tracksMap).length;
+
+    if (confirm(t('library_clean_prompt', count.toString()))) {
+      // Get all keys to remove
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('library')) {
+          keysToRemove.push(key);
+        }
+      }
+
+      // Remove all V2 library_ keys
+      for (const key of keysToRemove) {
+        localStorage.removeItem(key);
+      }
+
+      location.reload();
+    }
+  };
+
+  return (
+    <details>
+      <summary><i
+        aria-label="More Options"
+        class="ri-more-2-fill"
+      ></i></summary>
+      <ul>
+        <li onclick={() => document.getElementById('upload_ytify')?.click()}>
+          <label>
+            <i class="ri-import-line"></i>&nbsp;{t('library_import')}
+          </label>
+          <input type="file" id="upload_ytify" onchange={importLibrary} />
+        </li>
+        <li id="exportBtn" onclick={exportLibrary}>
+          <i class="ri-export-line"></i>&nbsp;{t('library_export')}
+
+        </li>
+        <li id="cleanLibraryBtn" onclick={cleanLibrary}>
+          <i class="ri-delete-bin-2-line"></i>&nbsp;{t('library_clean')}
+        </li>
+
+        <li onclick={() => document.getElementById('upload_songshift')?.click()}>
+          <label>
+            <i class="ri-refresh-line"></i>&nbsp;Import Playlists from SongShift
+          </label>
+          <input type="file" id="upload_songshift" onchange={async (e) => (await import('@modules/importSongshiftStreams')).default(e.target.files![0])} />
+        </li>
+
+        <Show when={getAuthToken()}
+          fallback={
+            <li onclick={() => {
+              const modal = render(() => <AuthModal onClose={() => modal()} />, document.body);
+            }}>
+              <i class="ri-user-line"></i>&nbsp;Account / Sync
+            </li>
+          }>
+          <li onclick={() => {
+            logout();
+            location.reload();
+          }}>
+            <i class="ri-logout-box-r-line"></i>&nbsp;Logout
+          </li>
+        </Show>
+      </ul>
+    </details >
+  )
+}
