@@ -16,12 +16,12 @@ footer.navbar-floating-container {
   width: auto;
   min-width: 280px;
   max-width: 440px;
-  background: rgba(18, 18, 22, 0.72);
-  backdrop-filter: blur(6px) saturate(180%);
-  -webkit-backdrop-filter: blur(6px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(18, 18, 24, 0.62);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 9999px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
   padding: 4px var(--size-2);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -43,12 +43,12 @@ footer.navbar-floating-container {
   z-index: 89;
   width: calc(100% - var(--size-6));
   max-width: 480px;
-  background: rgba(22, 22, 28, 0.75);
-  backdrop-filter: blur(6px) saturate(180%);
-  -webkit-backdrop-filter: blur(6px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(22, 22, 30, 0.68);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 1.25rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
   overflow: hidden;
   padding: var(--size-1) var(--size-2);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -59,6 +59,7 @@ footer.navbar-floating-container {
     bottom: calc(var(--size-4) + 68px);
   }
 }
+
 
 
 

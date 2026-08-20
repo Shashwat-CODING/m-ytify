@@ -123,17 +123,31 @@
   content: "\f073";
 }
 
-.ri-order-play-fill:before {
-  content: "\efb6";
-}
-
+.ri-play-list-2-line:before,
+.ri-play-list-line:before,
 .ri-play-list-2-fill:before {
   content: "\f00c";
+}
+
+.ri-sparkling-fill:before,
+.ri-sparkling-line:before {
+  content: "\f052";
+}
+
+.ri-delete-bin-line:before,
+.ri-delete-bin-2-line:before {
+  content: "\ec1e";
+}
+
+.ri-close-line:before,
+.ri-close-large-line:before {
+  content: "\f4c7";
 }
 
 .ri-play-list-add-fill:before {
   content: "\f00e";
 }
+
 
 .ri-fullscreen-line:before {
   content: "\ed9c";
