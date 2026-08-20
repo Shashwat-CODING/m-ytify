@@ -1,5 +1,5 @@
 import { createSignal, For, createEffect, Show } from "solid-js";
-import { config, generateImageUrl, proxyHandler, setConfig } from "@utils";
+import { config, generateImageUrl, setConfig } from "@utils";
 import { playerStore, playNext, setPlayerStore, t, queueStore } from "@stores";
 
 
@@ -54,7 +54,7 @@ export default function() {
         .map(f => ([f.resolution || f.quality, f.url])),
       captions: data.captions.map(c => ({
         ...c,
-        url: playerStore.proxy + c.url
+        url: c.url
       }))
     });
 
@@ -64,7 +64,8 @@ export default function() {
     }
     delete video.dataset.retried;
     if (savedQ)
-      video.src = proxyHandler(selector.value, true);
+      video.src = selector.value;
+
 
   });
 
@@ -126,13 +127,8 @@ export default function() {
           playerStore.audio.playbackRate = video.playbackRate;
         }}
         onerror={async () => {
-          const oldOrigin = new URL(video.src).origin;
           const { default: audioErrorHandler } = await import("@modules/audioErrorHandler");
           audioErrorHandler(video);
-          if (video.dataset.retried) {
-            const { proxy, audio } = playerStore;
-            audio.src = audio.src.replace(oldOrigin, proxy);
-          }
         }}
 
       >
@@ -159,7 +155,7 @@ export default function() {
         <select
           ref={selector}
           onchange={_ => {
-            video.src = proxyHandler(_.target.value, true);
+            video.src = _.target.value;
             video.currentTime = playerStore.audio.currentTime;
             if (config.watchMode)
               setConfig('watchMode', _.target.selectedOptions[0].textContent as string);

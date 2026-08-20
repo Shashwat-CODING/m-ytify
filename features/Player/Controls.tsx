@@ -1,7 +1,7 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
-import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
+import { playerStore, playPrev, queueStore, setPlayerStore, t } from "@stores";
 import { convertSStoHHMMSS, setConfig } from "@utils";
-import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
+import { Accessor, onMount, Setter, Show } from "solid-js";
 
 export default function(_: {
   showLyrics: Accessor<boolean>,
@@ -10,8 +10,8 @@ export default function(_: {
   setShowQueue?: Setter<boolean>
 }) {
 
-  const [isPointed, setPointed] = createSignal(params.has('t'));
   let slider!: HTMLInputElement;
+
 
 
   onMount(() => {
@@ -130,25 +130,42 @@ export default function(_: {
           <option value="4.00">4.00x</option>
         </select>
 
-        <Show when={playerStore.isMusic}>
-          <i
-            aria-label={t('player_lyrics')}
-            class="ri-music-2-line"
-            classList={{
-              on: _.showLyrics()
-            }}
-            onclick={() => {
-              const next = !_.showLyrics();
-              _.setShowLyrics(next);
-              if (next && _.setShowQueue) _.setShowQueue(false);
-            }}
-            title="Lyrics"
-          ></i>
-        </Show>
+        <button
+          type="button"
+          aria-label={t('player_lyrics')}
+          class="lyrics-btn"
+          classList={{
+            on: _.showLyrics()
+          }}
+          onclick={() => {
+            const next = !_.showLyrics();
+            _.setShowLyrics(next);
+            if (next && _.setShowQueue) _.setShowQueue(false);
+          }}
+          title="Lyrics"
+          style={{
+            background: _.showLyrics() ? "rgba(255, 255, 255, 0.22)" : "rgba(255, 255, 255, 0.06)",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
+            color: "var(--text)",
+            padding: "8px 12px",
+            "border-radius": "9999px",
+            cursor: "pointer",
+            display: "inline-flex",
+            "align-items": "center",
+            "justify-content": "center",
+            gap: "6px",
+            "font-size": "0.85rem",
+            "font-weight": "600",
+            transition: "all 0.2s ease"
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ display: "inline-block" }}>
+            <path d="M12 13.535V3h8v3h-6v7.535A4 4 0 1 1 12 13.535zM4 17a2 2 0 1 0 2-2 2 2 0 0 0-2 2zm8-13.5V6h6V3.5h-6z" />
+          </svg>
+          <span>Lyrics</span>
+        </button>
 
         <LikeButton />
-
-
 
         <i
           aria-label={t("player_loop")}
@@ -160,22 +177,7 @@ export default function(_: {
             setPlayerStore('loop', newLoopState);
           }}
         ></i>
-        <Show when={!playerStore.isMusic}>
-          <i
-            aria-label={t('player_save_progress')}
-            class={`ri-signpost-${isPointed() ? 'fill' : 'line'}`}
-            onclick={() => {
-              if (isPointed()) {
-                updateParam('t');
-                setPointed(false);
-              }
-              else {
-                updateParam('t', playerStore.currentTime.toString());
-                setPointed(true);
-              }
-            }}
-          ></i>
-        </Show>
+
 
         <select
           id="volumeChanger"

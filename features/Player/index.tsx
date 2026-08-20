@@ -160,15 +160,12 @@ export default function() {
 
         <MediaDetails />
 
-        <Show when={!playerStore.isWatching || playerStore.isMusic}>
-          <Controls
-            showLyrics={showLyrics}
-            setShowLyrics={setShowLyrics}
-            showQueue={showQueue}
-            setShowQueue={setShowQueue}
-          />
-        </Show>
-
+        <Controls
+          showLyrics={showLyrics}
+          setShowLyrics={setShowLyrics}
+          showQueue={showQueue}
+          setShowQueue={setShowQueue}
+        />
       </article>
 
     </section>
