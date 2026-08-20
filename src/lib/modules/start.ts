@@ -9,14 +9,17 @@ export default async function() {
     setNavStore('active', (drawer.lastMainFeature as any) || 'home');
   }
 
-  // Handle /s/:id URLs by transforming them to /?s=id internally
-  const pathParts = location.pathname.split('/');
-  if (pathParts.length === 3 && pathParts[1] === 's') {
-    const id = pathParts[2];
-    if (id) {
-      params.set('s', id);
-      history.replaceState({}, '', `/?s=${id}`);
-    }
+  // Handle /s/:id or bare /:id (11-char YouTube ID) URLs
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  if (pathParts.length === 2 && pathParts[0] === 's' && pathParts[1]) {
+    const id = pathParts[1];
+    params.set('s', id);
+    history.replaceState({}, '', `/?s=${id}`);
+  } else if (pathParts.length === 1 && /^[A-Za-z0-9_-]{11}$/.test(pathParts[0])) {
+    // bare /<videoId> share link format
+    const id = pathParts[0];
+    params.set('s', id);
+    history.replaceState({}, '', `/?s=${id}`);
   }
 
   const { shareAction } = config;
@@ -48,6 +51,15 @@ export default async function() {
     setSearchStore('query', q);
     setNavStore('active', 'search');
   }
+
+  const roomParam = params.get('room');
+  if (roomParam) {
+    import('@stores').then(({ setRoomStore }) => {
+      setRoomStore('roomCode', roomParam.toUpperCase());
+      setRoomStore('showModal', true);
+    });
+  }
+
 
 
   const isPWA = idFromURL(params.get('url') || params.get('text'));

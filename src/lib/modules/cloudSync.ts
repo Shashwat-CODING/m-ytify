@@ -6,7 +6,10 @@ import {
   syncFavoriteToggle,
   syncFollowArtist,
   syncCreatePlaylist,
-  syncDeletePlaylist
+  syncAddSongToPlaylist,
+  syncRemoveSongFromPlaylist,
+  syncDeletePlaylist,
+  syncFetchPlaylists
 } from "./muzoSync";
 import { getAuthToken } from "./muzoAuth";
 
@@ -35,5 +38,8 @@ export {
   syncFavoriteToggle,
   syncFollowArtist,
   syncCreatePlaylist,
-  syncDeletePlaylist
+  syncAddSongToPlaylist,
+  syncRemoveSongFromPlaylist,
+  syncDeletePlaylist,
+  syncFetchPlaylists
 };

@@ -6,8 +6,9 @@ export function initMediaSession() {
   const msn = navigator.mediaSession;
 
   msn.setActionHandler('play', () => {
-    playerStore.audio.play();
+    playerStore.audio.play().catch(() => {});
   });
+
 
   msn.setActionHandler('pause', () => {
     playerStore.audio.pause();

@@ -5,7 +5,9 @@ import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
 
 export default function(_: {
   showLyrics: Accessor<boolean>,
-  setShowLyrics: Setter<boolean>
+  setShowLyrics: Setter<boolean>,
+  showQueue?: Accessor<boolean>,
+  setShowQueue?: Setter<boolean>
 }) {
 
   const [isPointed, setPointed] = createSignal(params.has('t'));
@@ -23,6 +25,20 @@ export default function(_: {
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
   }
 
+  function emitSeek(posSec: number) {
+    import('@stores').then(({ roomStore }) => {
+      if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+        import('@modules/metroClient').then(({ metroClient }) => {
+          metroClient.sendPlaybackAction({
+            action: 'seek',
+            track_id: playerStore.stream.id,
+            position: Math.round(posSec * 1000)
+          });
+        });
+      }
+    });
+  }
+
   return (
     <>
       <span class="slider">
@@ -32,7 +48,9 @@ export default function(_: {
           max={playerStore.fullDuration}
           ref={slider}
           onchange={(e) => {
-            playerStore.audio.currentTime = parseInt(e.target.value);
+            const newPos = parseInt(e.target.value);
+            playerStore.audio.currentTime = newPos;
+            emitSeek(newPos);
           }}
         />
         <div>
@@ -57,7 +75,9 @@ export default function(_: {
           class="ri-replay-15-line"
           id="seekBwdButton"
           onclick={() => {
-            playerStore.audio.currentTime -= 15;
+            const newPos = Math.max(0, playerStore.audio.currentTime - 15);
+            playerStore.audio.currentTime = newPos;
+            emitSeek(newPos);
           }}
         ></button>
 
@@ -68,9 +88,12 @@ export default function(_: {
           class="ri-forward-15-line"
           id="seekFwdButton"
           onclick={() => {
-            playerStore.audio.currentTime += 15;
+            const newPos = playerStore.audio.currentTime + 15;
+            playerStore.audio.currentTime = newPos;
+            emitSeek(newPos);
           }}
         ></button>
+
         <Show when={queueStore.list.length}>
           <PlayNextButton />
         </Show>
@@ -107,19 +130,24 @@ export default function(_: {
           <option value="4.00">4.00x</option>
         </select>
 
-        <Show when={playerStore.isMusic}>
-          <i
-            aria-label={t('player_lyrics')}
-            class="ri-music-2-line"
-            classList={{
-              on: _.showLyrics()
-            }}
-            onclick={() => _.setShowLyrics(!_.showLyrics())}
-          ></i>
-        </Show>
-
+        <i
+          aria-label={t('player_lyrics')}
+          class="ri-music-2-line"
+          classList={{
+            on: _.showLyrics()
+          }}
+          onclick={() => {
+            const next = !_.showLyrics();
+            _.setShowLyrics(next);
+            if (next && _.setShowQueue) _.setShowQueue(false);
+          }}
+          title="Lyrics"
+        ></i>
 
         <LikeButton />
+
+
+
 
         <i
           aria-label={t("player_loop")}
@@ -157,9 +185,20 @@ export default function(_: {
             playerStore.audio.volume = vol;
             setConfig('volume', (vol * 100).toString());
             setPlayerStore('volume', vol);
+            import('@stores').then(({ roomStore }) => {
+              if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+                import('@modules/metroClient').then(({ metroClient }) => {
+                  metroClient.sendPlaybackAction({
+                    action: 'set_volume',
+                    volume: vol
+                  });
+                });
+              }
+            });
             ref.blur();
           }}
         >
+
           <option value="0">0%</option>
           <option value="0.002">0.2%</option>
           <option value="0.005">0.5%</option>

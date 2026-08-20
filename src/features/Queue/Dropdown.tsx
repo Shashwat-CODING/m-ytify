@@ -93,10 +93,18 @@ export default function Dropdown() {
             setQueueStore('list', []);
             setQueueStore('history', []);
             deactivateQueuePrefetch();
+            import('@stores').then(({ roomStore }) => {
+              if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+                import('@modules/metroClient').then(({ metroClient }) => {
+                  metroClient.sendPlaybackAction({ action: 'queue_clear' });
+                });
+              }
+            });
           }
         }>
           {t('queue_clear')}
         </li >
+
 
 
       </ul>

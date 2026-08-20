@@ -21,8 +21,9 @@ export default function() {
         )
           audio.pause();
         else
-          audio.play();
+          audio.play().catch(() => {});
       }}
+
       aria-label={t('player_play_button')}
     ></button>
   );

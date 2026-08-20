@@ -66,19 +66,11 @@ export function proxyHandler(
   url: string,
   prefetch?: boolean
 ) {
-  const isVideo = Boolean(document.querySelector('video'));
-  const useProxy = playerStore.stream.author?.endsWith('- Topic') && !isVideo;
-
   if (!prefetch)
     setPlayerStore('status', t('player_audiostreams_insert'));
-
-  const link = new URL(url);
-  const origin = link.origin;
-  const proxy = playerStore.proxy;
-
-  return useProxy && proxy && !url.includes('&fallback') ?
-    url.replace(origin, proxy) : url;
+  return url;
 }
+
 
 
 export async function quickSwitch() {
@@ -89,8 +81,9 @@ export async function quickSwitch() {
   const timeOfSwitch = audio.currentTime;
   await player(stream.id);
   setPlayerStore('currentTime', timeOfSwitch);
-  audio.play();
+  audio.play().catch(() => {});
 }
+
 
 
 export async function preferredStream(audioStreams: AudioStream[]) {

@@ -1,7 +1,8 @@
-import { createSignal, onMount, For, Show } from "solid-js";
+import { createSignal, onMount, createEffect, For, Show } from "solid-js";
 import { getStoredUser, getAuthToken, isGuestUser, logout, MuzoUser } from "@modules/muzoAuth";
 import { getCollection, getTracksMap, getLists, fetchCollection } from "@utils";
-import { setNavStore } from "@stores";
+import { setNavStore, store } from "@stores";
+import { pullMuzoUserData } from "@modules/muzoSync";
 import StreamItem from "@components/StreamItem";
 import ListItem from "@components/ListItem";
 import AuthModal from "@components/AuthModal";
@@ -10,31 +11,28 @@ import "./Home.css";
 export default function Home() {
   const [user, setUser] = createSignal<MuzoUser | null>(getStoredUser());
   const [showAccountMenu, setShowAccountMenu] = createSignal(false);
+  const [recentHistory, setRecentHistory] = createSignal<TrackItem[]>([]);
+  const [favoriteTracks, setFavoriteTracks] = createSignal<TrackItem[]>([]);
+  const [userPlaylists, setUserPlaylists] = createSignal<Playlist[]>([]);
+  const [historyCount, setHistoryCount] = createSignal(0);
+  const [favoritesCount, setFavoritesCount] = createSignal(0);
+  const [showAuthModal, setShowAuthModal] = createSignal(false);
 
-  onMount(() => {
+  const refreshData = () => {
     setUser(getStoredUser());
-  });
-
-  const getRecentHistoryTracks = () => {
-    const historyIds = getCollection("history").slice(0, 20);
+    const historyIds = getCollection("history");
+    setHistoryCount(historyIds.length);
+    const favoriteIds = getCollection("favorites");
+    setFavoritesCount(favoriteIds.length);
     const tracks = getTracksMap();
-    return historyIds.map(id => tracks[id]).filter(Boolean);
-  };
 
-  const getFavoriteTracks = () => {
-    const favoriteIds = getCollection("favorites").slice(0, 20);
-    const tracks = getTracksMap();
-    return favoriteIds.map(id => tracks[id]).filter(Boolean);
-  };
+    setRecentHistory(historyIds.slice(0, 20).map(id => tracks[id]).filter(Boolean));
+    setFavoriteTracks(favoriteIds.slice(0, 20).map(id => tracks[id]).filter(Boolean));
 
-  const getUserPlaylists = () => {
     const playlists = getLists("playlists");
-    const tracks = getTracksMap();
-
-    return playlists.map(p => {
+    setUserPlaylists(playlists.map(p => {
       let cover = p.img;
       if (!cover) {
-        // Check if collection has songs and use first song's thumbnail
         const plSongs = getCollection(`pl_${p.name}`) || getCollection(p.id) || getCollection(p.name);
         if (plSongs.length > 0 && tracks[plSongs[0]]) {
           cover = tracks[plSongs[0]].img || "";
@@ -44,8 +42,21 @@ export default function Home() {
         ...p,
         img: cover
       };
-    });
+    }));
   };
+
+  onMount(() => {
+    refreshData();
+    if (getAuthToken()) {
+      pullMuzoUserData().then(refreshData).catch(() => {});
+    }
+  });
+
+  // Re-run whenever syncState or active navigation changes
+  createEffect(() => {
+    store.syncState;
+    refreshData();
+  });
 
   const avatarUrl = () => {
     const u = user();
@@ -54,8 +65,6 @@ export default function Home() {
     const name = u?.username || u?.email || "Guest";
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=ff6b00&backgroundType=gradientLinear`;
   };
-
-  const [showAuthModal, setShowAuthModal] = createSignal(false);
 
   return (
     <section class="homeSection">
@@ -70,7 +79,7 @@ export default function Home() {
           <h2>m-ytify</h2>
         </div>
 
-        <div class="userMenuContainer">
+        <div class="userMenuContainer" style={{ display: "flex", "align-items": "center", gap: "10px" }}>
           <div
             class="avatarButton"
             onclick={() => setShowAccountMenu(!showAccountMenu())}
@@ -132,7 +141,7 @@ export default function Home() {
         <AuthModal
           onClose={() => {
             setShowAuthModal(false);
-            setUser(getStoredUser());
+            refreshData();
           }}
         />
       </Show>
@@ -144,7 +153,7 @@ export default function Home() {
         <section class="homeCardSection">
           <div class="sectionHeader">
             <h3>Recently Played</h3>
-            <Show when={getCollection("history").length > 0}>
+            <Show when={historyCount() > 0}>
               <button class="viewAllBtn" onclick={() => fetchCollection("history")}>
                 View All
               </button>
@@ -152,11 +161,11 @@ export default function Home() {
           </div>
 
           <Show
-            when={getRecentHistoryTracks().length > 0}
+            when={recentHistory().length > 0}
             fallback={<p class="emptyPrompt">No recent songs played yet.</p>}
           >
             <div class="horizontalTracksRail">
-              <For each={getRecentHistoryTracks()}>
+              <For each={recentHistory()}>
                 {(track) => (
                   <StreamItem
                     id={track.id}
@@ -184,11 +193,11 @@ export default function Home() {
           </div>
 
           <Show
-            when={getUserPlaylists().length > 0}
+            when={userPlaylists().length > 0}
             fallback={<p class="emptyPrompt">No playlists found.</p>}
           >
             <div class="playlistsGrid">
-              <For each={getUserPlaylists()}>
+              <For each={userPlaylists()}>
                 {(playlist) => (
                   <ListItem
                     id={playlist.id}
@@ -206,7 +215,7 @@ export default function Home() {
         <section class="homeCardSection">
           <div class="sectionHeader">
             <h3>Favorites</h3>
-            <Show when={getCollection("favorites").length > 0}>
+            <Show when={favoritesCount() > 0}>
               <button class="viewAllBtn" onclick={() => fetchCollection("favorites")}>
                 View All
               </button>
@@ -214,11 +223,11 @@ export default function Home() {
           </div>
 
           <Show
-            when={getFavoriteTracks().length > 0}
+            when={favoriteTracks().length > 0}
             fallback={<p class="emptyPrompt">No favorite tracks yet.</p>}
           >
             <div class="horizontalTracksRail">
-              <For each={getFavoriteTracks()}>
+              <For each={favoriteTracks()}>
                 {(track) => (
                   <StreamItem
                     id={track.id}

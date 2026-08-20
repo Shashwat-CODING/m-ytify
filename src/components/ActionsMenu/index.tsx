@@ -5,7 +5,7 @@ import { render } from 'solid-js/web';
 import { LikeButton } from '@components/MediaPartials';
 import CollectionSelector from './CollectionSelector';
 import StreamItem from '@components/StreamItem';
-import { setStore, store, t, playerStore, setPlayerStore, getList, setListStore, addToQueue, queueStore, setQueueStore, setNavStore } from '@stores';
+import { setStore, store, t, playerStore, setPlayerStore, getList, setListStore, addToQueue, queueStore, setQueueStore, setNavStore, roomStore } from '@stores';
 
 
 export default function() {
@@ -99,6 +99,21 @@ export default function() {
           <i class="ri-list-check-2"></i>{t('actions_menu_enqueue')}
         </li>
 
+        <Show when={roomStore.status === 'connected' && !roomStore.isHost}>
+          <li tabindex="2" onclick={() => {
+            const { actionsMenu } = store;
+            if (actionsMenu) {
+              import('@modules/metroClient').then(({ metroClient }) => {
+                metroClient.suggestTrack(actionsMenu);
+              });
+            }
+            closeDialog();
+          }}>
+            <i class="ri-broadcast-line"></i>Suggest to Room
+          </li>
+        </Show>
+
+
         <li tabindex="3" onclick={async () => {
           const id = store.actionsMenu?.id;
           const currentTitle = store.actionsMenu?.title;
@@ -143,8 +158,9 @@ export default function() {
                 playerStore.audio.currentTime = currentTime;
                 setPlayerStore('currentTime', Math.floor(currentTime));
               }
-              if (wasPlaying) playerStore.audio.play();
+              if (wasPlaying) playerStore.audio.play().catch(() => {});
               setStore('snackbar', 'Switched to Lossless Audio');
+
             } else {
               setStore('snackbar', 'Lossless stream not available for this track');
             }

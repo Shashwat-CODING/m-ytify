@@ -6,14 +6,10 @@ export default function(
   prefetch = ''
 ) {
   audio.pause();
-  const { proxy } = playerStore;
 
   if (!audio.src || audio.src === location.href) return;
 
-  const url = new URL(audio.src);
   const isFallback = audio.src.endsWith('&fallback');
-  const isAlreadyProxy = url.origin === proxy || audio.dataset.retried === 'true';
-
   const id = prefetch || playerStore.stream.id;
 
   if (isFallback) {
@@ -25,30 +21,13 @@ export default function(
     return;
   }
 
-  if (!proxy || isAlreadyProxy) {
-    if (!prefetch) {
-      setPlayerStore({
-        playbackState: 'none',
-        status: 'Streaming Failed EA'
-      });
-      setStore('snackbar', 'Streaming Failed EA');
-      console.log(audio.src);
-    }
-    streamCache.remove(id);
-    return;
-  }
-
-  console.log('ErrorHandler: Switching to proxy ' + proxy);
-  const newSrc = audio.src.replace(url.origin, proxy);
-
-  if (newSrc !== audio.src) {
-    audio.dataset.retried = 'true';
-    audio.src = newSrc;
-  } else if (!prefetch) {
+  // No proxy fallback — report failure and clear cache
+  if (!prefetch) {
     setPlayerStore({
       playbackState: 'none',
-      status: 'Streaming Failed EB'
+      status: 'Streaming Failed'
     });
-    streamCache.remove(id);
+    setStore('snackbar', 'Streaming Failed');
   }
+  streamCache.remove(id);
 }

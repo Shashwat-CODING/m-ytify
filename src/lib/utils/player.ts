@@ -28,22 +28,23 @@ export async function player(id?: string) {
       if (primaryData) {
         const played = await playPrimaryStream(primaryData);
         if (played) {
-          if (config.similarContent && !enforceVideo && !isQueuePrefetchActive()) {
-            import('../modules/getStreamData').then(async mod => {
-              const invData = await mod.default(id, playerAbortController.signal);
-              if (invData && 'recommendedVideos' in invData) {
-                import('../modules/enqueueRelatedStreams')
-                  .then(m => m.default((invData as Invidious).recommendedVideos));
-              }
-            });
+          if (!enforceVideo && !isQueuePrefetchActive()) {
+            import('../modules/relatedQueue')
+              .then(m => m.enqueueRelatedSongs(id, { skipFirst: true, silent: true }))
+              .catch(() => {});
           }
           return;
         }
       }
     } catch (e) {
-      console.warn('Primary stream fetch failed, falling back to default stream', e);
+      if ((e as Error)?.name !== 'AbortError') {
+        console.warn('Primary stream fetch failed, falling back to default stream', e);
+      }
     }
+
+
   }
+
 
   setPlayerStore('isLossless', false);
 
@@ -89,21 +90,12 @@ export async function player(id?: string) {
     ));
 
 
-  if (config.similarContent && !enforceVideo && !isQueuePrefetchActive())
-    import('../modules/enqueueRelatedStreams')
-      .then(mod => mod.default(invidiousData.recommendedVideos));
+  if (config.similarContent && !enforceVideo && !isQueuePrefetchActive()) {
+    import('../modules/relatedQueue')
+      .then(m => m.enqueueRelatedSongs(id, { silent: true }))
+      .catch(() => {});
+  }
 
-
-
-  // related streams imported into discovery after 1min 40seconds, short streams are naturally filtered out
-
-  if (config.discover)
-    import('../modules/setDiscoveries')
-      .then(mod => {
-        setTimeout(() => {
-          mod.default(id, invidiousData.recommendedVideos);
-        }, 1e5);
-      });
 
 }
 

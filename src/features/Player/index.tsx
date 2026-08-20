@@ -8,12 +8,13 @@ const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtw
 const Lyrics = lazy(() => import('./Lyrics'));
 const Video = lazy(() => import('./Video'));
 const Controls = lazy(() => import('./Controls'));
+const PlayerQueue = lazy(() => import('./PlayerQueue'));
 
 export default function() {
   let playerSection!: HTMLDivElement;
 
-
   const [showLyrics, setShowLyrics] = createSignal(false);
+  const [showQueue, setShowQueue] = createSignal(false);
 
   onMount(() => {
     setNavStore('player', 'ref', playerSection);
@@ -62,43 +63,115 @@ export default function() {
           </Show>
         </p>
 
-        <div class="right-group">
+        <div class="right-group" style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+          <i
+            aria-label={t('player_more')}
+            class="ri-more-2-fill"
+            id="moreBtn"
+            onclick={() => setStore('actionsMenu', playerStore.stream)}
+            title="Options"
+          ></i>
+
+          <i
+            aria-label="Queue"
+            class="ri-play-list-2-fill"
+            classList={{ on: showQueue() }}
+            style={{
+              cursor: "pointer",
+              color: showQueue() ? "var(--text)" : undefined,
+              background: showQueue() ? "rgba(255,255,255,0.15)" : undefined,
+              "border-radius": "8px"
+            }}
+            onclick={() => {
+              const next = !showQueue();
+              setShowQueue(next);
+              if (next) setShowLyrics(false);
+            }}
+            title="Queue"
+          ></i>
 
           <i
             aria-label={t('close')}
             onclick={() => { closeFeature('player') }}
-            class="ri-close-large-line"></i>
-
+            class="ri-close-large-line"
+            title="Close"
+          ></i>
         </div>
-        <i
-          aria-label={t('player_more')}
-          class="ri-more-2-fill"
-          id="moreBtn"
-          onclick={() => setStore('actionsMenu', playerStore.stream)}
-        ></i>
       </header>
+
       <article>
 
         <Show when={playerStore.isWatching && !playerStore.isMusic}>
           <Video />
         </Show>
 
-        <Show when={showLyrics()}>
-          <Lyrics onClose={() => setShowLyrics(false)} />
-        </Show>
+        <div class="player-main-view" style={{
+          position: "relative",
+          width: "100%",
+          "max-width": "min(88dvw, 420px)",
+          "aspect-ratio": "1",
+          margin: "0 auto",
+          "border-radius": "1.5rem",
+          overflow: "hidden",
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "center"
+        }}>
+          <Show when={(!playerStore.isWatching || playerStore.isMusic) && config.loadImage}>
+            <MediaArtwork />
+          </Show>
 
-        <Show when={(!playerStore.isWatching || playerStore.isMusic) && config.loadImage && !showLyrics()}>
-          <MediaArtwork />
-        </Show>
+          <Show when={showLyrics()}>
+            <div class="player-overlay-layer lyrics-overlay" style={{
+              position: "absolute",
+              top: "0",
+              left: "0",
+              width: "100%",
+              height: "100%",
+              background: "color-mix(in srgb, var(--bg) 88%, transparent)",
+              "backdrop-filter": "blur(20px)",
+              "-webkit-backdrop-filter": "blur(20px)",
+              "border-radius": "1.5rem",
+              overflow: "hidden",
+              "z-index": "5"
+            }}>
+              <Lyrics onClose={() => setShowLyrics(false)} />
+            </div>
+          </Show>
 
+          <Show when={showQueue()}>
+            <div class="player-overlay-layer queue-overlay" style={{
+              position: "absolute",
+              top: "0",
+              left: "0",
+              width: "100%",
+              height: "100%",
+              background: "color-mix(in srgb, var(--bg) 92%, transparent)",
+              "backdrop-filter": "blur(20px)",
+              "-webkit-backdrop-filter": "blur(20px)",
+              "border-radius": "1.5rem",
+              overflow: "hidden",
+              "z-index": "5"
+            }}>
+              <PlayerQueue onClose={() => setShowQueue(false)} />
+            </div>
+          </Show>
+        </div>
 
         <MediaDetails />
 
         <Show when={!playerStore.isWatching || playerStore.isMusic}>
-          <Controls showLyrics={showLyrics} setShowLyrics={setShowLyrics} />
+          <Controls
+            showLyrics={showLyrics}
+            setShowLyrics={setShowLyrics}
+            showQueue={showQueue}
+            setShowQueue={setShowQueue}
+          />
         </Show>
 
       </article>
+
     </section>
   )
 }
+

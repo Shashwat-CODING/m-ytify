@@ -2,7 +2,7 @@ import { lazy, onMount, Show, createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 import { themer, syncLibrary } from '@utils';
 import NavBar from '@components/NavBar.tsx';
-import { updateLang, setStore, store, navStore, playerStore } from '@stores';
+import { updateLang, setStore, store, navStore, playerStore, roomStore, setRoomStore } from '@stores';
 import { hasSeenOnboarding, getAuthToken } from '@modules/muzoAuth';
 import './styles/global.css';
 
@@ -20,6 +20,7 @@ const MiniPlayer = lazy(() => import('@components/MiniPlayer'));
 const ActionsMenu = lazy(() => import('@components/ActionsMenu'));
 const SnackBar = lazy(() => import('@components/SnackBar'));
 const AuthModal = lazy(() => import('@components/AuthModal'));
+const RoomModal = lazy(() => import('@components/RoomModal'));
 
 export default function App() {
   const [showAuth, setShowAuth] = createSignal(false);
@@ -33,7 +34,15 @@ export default function App() {
       setStore('syncState', 'synced');
       syncLibrary('init');
     }
+
+    const savedSessionToken = localStorage.getItem('metro_session_token');
+    if (savedSessionToken) {
+      import('@modules/metroClient').then(({ metroClient }) => {
+        metroClient.connect(savedSessionToken).catch(console.warn);
+      });
+    }
   });
+
 
   const Home = navStore.home.component;
   const Search = navStore.search.component;
@@ -56,10 +65,6 @@ export default function App() {
           <Show when={navStore.active === 'library'}><Library /></Show>
           <Show when={navStore.active === 'list'}><List /></Show>
           <Show when={navStore.active === 'settings'}><Settings /></Show>
-
-          <footer class="navbar-floating-container">
-            <NavBar />
-          </footer>
         </div>
 
         <Show when={navStore.player.state}>
@@ -68,6 +73,13 @@ export default function App() {
           </div>
         </Show>
       </main>
+
+      {/* Floating navbar — outside scroll container so backdrop-filter works */}
+      <footer class="navbar-floating-container">
+        <NavBar />
+      </footer>
+
+      {/* Floating miniplayer — outside scroll container so backdrop-filter works */}
       <Show when={!navStore.player.state && playerStore.playbackState !== 'none'}>
         <div class="miniplayer-floating-container">
           <MiniPlayer />
@@ -81,6 +93,9 @@ export default function App() {
       </Show>
       <Show when={showAuth()}>
         <AuthModal onClose={() => setShowAuth(false)} isFirstLaunch={true} />
+      </Show>
+      <Show when={roomStore.showModal}>
+        <RoomModal onClose={() => setRoomStore('showModal', false)} />
       </Show>
     </div>
   );

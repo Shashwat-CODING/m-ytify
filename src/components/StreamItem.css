@@ -123,6 +123,49 @@
 	}
 }
 
-#queuelist>a {
+#queuelist > a {
 	transition: initial;
+}
+
+#queuelist .streamItem {
+	padding: 6px 8px;
+	gap: 8px;
+
+	span {
+		margin-right: 4px;
+		width: 44px;
+		height: 44px;
+		flex-shrink: 0;
+
+		img {
+			width: 44px !important;
+			height: 44px !important;
+			max-width: 44px !important;
+			max-height: 44px !important;
+			aspect-ratio: 1 / 1 !important;
+			object-fit: cover !important;
+			border-radius: 8px !important;
+		}
+
+		.duration {
+			display: none;
+		}
+	}
+
+	div.metadata {
+		width: calc(100% - 56px);
+		justify-content: center;
+
+		.title {
+			font-size: 0.85rem;
+			line-height: 1.2;
+		}
+
+		.avu {
+			height: auto;
+			p {
+				font-size: 0.75rem;
+			}
+		}
+	}
 }

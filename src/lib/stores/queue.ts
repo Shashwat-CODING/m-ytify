@@ -64,7 +64,33 @@ export function addToQueue(items: TrackItem[], options: {
     }
     return combined;
   });
+
+  import('./room').then(({ roomStore }) => {
+    if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+      import('@modules/metroClient').then(({ metroClient }) => {
+        for (const item of itemsToAdd) {
+          let durationMs = 0;
+          if (item.duration) {
+            const parts = item.duration.split(':').map(Number);
+            if (parts.length === 2) durationMs = (parts[0] * 60 + parts[1]) * 1000;
+            else if (parts.length === 3) durationMs = (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
+          }
+          metroClient.sendPlaybackAction({
+            action: 'queue_add',
+            track_info: {
+              id: item.id,
+              title: item.title,
+              artist: item.author || '',
+              duration: durationMs
+            },
+            insert_next: Boolean(options.prepend)
+          });
+        }
+      });
+    }
+  });
 }
+
 
 export function groupQueueByAuthor(list: TrackItem[]): TrackItem[] {
   if (list.length <= 1) return [...list];

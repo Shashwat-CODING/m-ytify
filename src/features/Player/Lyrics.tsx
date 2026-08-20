@@ -147,29 +147,49 @@ export default function(props: { onClose: () => void }) {
     setPlayerStore('lrcSync', undefined);
 
     const artistName = author.endsWith(' - Topic') ? author.slice(0, -8) : author;
-    fetch(
-      `https://mlc-ytify.kouzu.in/api/lyrics/${id}?name=${encodeURIComponent(title)}&artist=${encodeURIComponent(artistName)}`
-    )
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
-          const generatedTtml = jsonToTTML(data.lyrics);
-          setTtml(generatedTtml);
-        } else if (data.syncedLyrics) {
-          const generatedTtml = lrcToTTML(data.syncedLyrics);
-          setTtml(generatedTtml);
-        } else if (data.plainLyrics) {
-          const generatedTtml = plainToTTML(data.plainLyrics);
-          setTtml(generatedTtml);
-        } else {
-          setStore('snackbar', t('lyrics_no_found'));
-          props.onClose();
+
+    const fetchLyricsWithRetry = async () => {
+      const maxRetries = 3;
+      const cleanTitle = title.replace(/\s*[([][^\])]*(?:official|video|audio|lyrics?|hd|4k|mv)[^\])]*[\])]/gi, '').trim() || title;
+      const queries = [
+        `https://mlc-ytify.kouzu.in/api/lyrics/${id}?name=${encodeURIComponent(title)}&artist=${encodeURIComponent(artistName)}`,
+        `https://mlc-ytify.kouzu.in/api/lyrics/${id}?name=${encodeURIComponent(cleanTitle)}&artist=${encodeURIComponent(artistName)}`,
+        `https://mlc-ytify.kouzu.in/api/lyrics/${id}?name=${encodeURIComponent(cleanTitle)}`
+      ];
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const queryUrl = queries[Math.min(attempt, queries.length - 1)];
+        try {
+          const res = await fetch(queryUrl);
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data.lyrics) && data.lyrics.length > 0) {
+              setTtml(jsonToTTML(data.lyrics));
+              return;
+            } else if (data.syncedLyrics) {
+              setTtml(lrcToTTML(data.syncedLyrics));
+              return;
+            } else if (data.plainLyrics) {
+              setTtml(plainToTTML(data.plainLyrics));
+              return;
+            }
+          }
+        } catch {
+          // Retry next attempt
         }
-      }).catch(() => {
-        setStore('snackbar', t('lyrics_failed'));
-        props.onClose();
-      });
+        await new Promise(r => setTimeout(r, (attempt + 1) * 300));
+      }
+
+      setStore('snackbar', t('lyrics_no_found'));
+      props.onClose();
+    };
+
+    fetchLyricsWithRetry().catch(() => {
+      setStore('snackbar', t('lyrics_failed'));
+      props.onClose();
+    });
   });
+
 
   createEffect(() => {
     if (!ttml()) return;
@@ -248,10 +268,13 @@ export default function(props: { onClose: () => void }) {
     <div class="lyrics" style={{
       display: "flex",
       "flex-direction": "column",
-      background: "var(--bg)",
+      background: "transparent",
+      width: "100%",
+      height: "100%",
       padding: "0",
       overflow: "hidden"
     }}>
+
       {ttml() ? (
         <am-lyrics
           ref={amLyricsRef}

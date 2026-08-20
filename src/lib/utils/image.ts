@@ -11,14 +11,21 @@ export function generateImageUrl(
   _music?: boolean
 ) {
   if (!id) return '';
-  if (id.startsWith('http://') || id.startsWith('https://')) {
+  if (id.startsWith('http://') || id.startsWith('https://') || id.startsWith('data:')) {
     return id;
   }
   if (id.startsWith('/')) {
+    if (id.startsWith('/vi/') || id.startsWith('/vi_webp/')) {
+      return `https://i.ytimg.com${id}`;
+    }
     return `https://yt3.googleusercontent.com${id}`;
   }
-  return id;
+
+  // If it's a YouTube video ID (e.g. "D5v0P2-WLSo" or similar 11-char ID)
+  const resType = _res === 'maxres' || _res === '720' ? 'maxresdefault' : (_res === 'hq' ? 'hqdefault' : 'mqdefault');
+  return `https://i.ytimg.com/vi/${id}/${resType}.jpg`;
 }
+
 
 
 
@@ -115,13 +122,21 @@ export function themer() {
     import('../modules/extractColorFromImage')
       .then(mod => mod.default)
       .then(e => e(generateImageUrl(stream.id, 'mq'), true))
-      .then(colorInjector);
+      .then(colorInjector)
+      .catch(() => {
+        colorInjector(
+          initColor
+            .split(',')
+            .map(s => parseInt(s))
+        );
+      });
   else
     colorInjector(
       initColor
         .split(',')
         .map(s => parseInt(s))
     );
+
 
 }
 

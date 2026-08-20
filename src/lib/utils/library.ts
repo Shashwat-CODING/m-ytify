@@ -56,13 +56,17 @@ export const getMeta = (): Meta => {
 
 
 export const getCollectionsKeys = () => {
+  const userPlaylists = getLists('playlists');
+  const playlistNames = new Set(userPlaylists.map(p => p.name));
+
   const allKeys = Object
     .keys(localStorage)
     .filter(key => key.startsWith('library_'))
     .map(key => key.slice(8))
-    .filter(key => !['channels', 'playlists', 'tracks', 'meta', 'albums']
+    .filter(key => !['channels', 'playlists', 'tracks', 'meta', 'albums', 'libraryPlays', 'discovery']
       .includes(key))
-    .filter(key => !key.startsWith('pl_'));
+    .filter(key => !key.startsWith('pl_'))
+    .filter(key => !playlistNames.has(key));
 
   const reservedOrder = ['history', 'favorites', 'liked', 'listenLater'];
   const meta = JSON.parse(localStorage.getItem('library_meta') || '{}');
@@ -72,6 +76,7 @@ export const getCollectionsKeys = () => {
     ...allKeys.filter(key => !reservedOrder.includes(key)).sort((a, b) => (meta[a] || 0) - (meta[b] || 0))
   ];
 };
+
 
 export const getTracksMap = (): Collection =>
   JSON.parse(localStorage.getItem('library_tracks') || '{}');
@@ -163,6 +168,9 @@ export function addToCollection(
       import('@modules/muzoSync').then(m => m.syncTrackPlay(item));
     } else if (name === 'favorites') {
       import('@modules/muzoSync').then(m => m.syncFavoriteToggle(item, true));
+    } else if (name.startsWith('pl_')) {
+      const plName = name.slice(3);
+      import('@modules/muzoSync').then(m => m.syncAddSongToPlaylist(plName, item));
     }
   }
 
@@ -189,6 +197,9 @@ export function removeFromCollection(
 
     if (name === 'favorites') {
       import('@modules/muzoSync').then(m => m.syncFavoriteToggle({ id } as TrackItem, false));
+    } else if (name.startsWith('pl_')) {
+      const plName = name.slice(3);
+      import('@modules/muzoSync').then(m => m.syncRemoveSongFromPlaylist(plName, id));
     }
 
     let isReferenced = false;

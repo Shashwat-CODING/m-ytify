@@ -1,4 +1,4 @@
-import { playerStore, setPlayerStore } from "@stores";
+import { playerStore, setPlayerStore, roomStore } from "@stores";
 import { config, generateImageUrl } from "@utils";
 
 
@@ -76,4 +76,31 @@ export default async function(data: TrackItem) {
     });
   }
 
+  if (roomStore.status === 'connected') {
+    import('@modules/metroClient').then(({ metroClient }) => {
+      if (roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+        let durationMs = 0;
+        if (data.duration) {
+          const parts = data.duration.split(':').map(Number);
+          if (parts.length === 2) durationMs = (parts[0] * 60 + parts[1]) * 1000;
+          else if (parts.length === 3) durationMs = (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
+        }
+        metroClient.sendPlaybackAction({
+          action: 'change_track',
+          track_info: {
+            id: data.id,
+            title: data.title,
+            artist: authorText,
+            album: playerStore.context.src || '',
+            duration: durationMs,
+            thumbnail: img
+          }
+        });
+      } else if (!roomStore.isHost) {
+        metroClient.sendBufferReady(data.id);
+      }
+    });
+  }
+
 }
+

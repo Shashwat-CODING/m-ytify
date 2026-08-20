@@ -3,8 +3,7 @@ import './Library.css';
 import Collections from "./Collections";
 
 import { getLibraryAlbums, getMeta, getLists, getTracksMap, getCollection } from "@utils";
-import { t, setNavStore, store } from "@stores";
-import { getAuthToken } from "@modules/muzoAuth";
+import { t, setNavStore } from "@stores";
 import ListItem from "@components/ListItem";
 import Dropdown from "./Dropdown";
 
@@ -16,7 +15,6 @@ export default function() {
   const [showGallery, setShowGallery] = createSignal(false);
   const [showSubFeed, setShowSubFeed] = createSignal(false);
   let libraryRef!: HTMLElement;
-  let syncBtn!: HTMLElement;
 
   if (getMeta().version === 4)
     import('@modules/libraryMigratorV5').then(m => m.default());
@@ -31,33 +29,10 @@ export default function() {
         <p>{t('nav_library')}</p>
 
         <div class="right-group">
-          <Show when={getAuthToken()}>
-            <i
-              id="syncNow"
-              classList={{
-                'ri-cloud-fill': store.syncState === 'synced',
-                'ri-loader-3-line loading-spinner': store.syncState === 'syncing',
-                'ri-cloud-off-fill': store.syncState === 'dirty' || store.syncState === 'error',
-                'error': store.syncState === 'error',
-              }}
-              aria-label={
-                (store.syncState === 'dirty' || store.syncState === 'error') ?
-                  'Save to Cloud' :
-                  store.syncState === 'synced' ?
-                    'Import from Cloud' : 'Syncing'
-              }
-              ref={syncBtn}
-              onclick={() => {
-                import('@modules/muzoSync').then(({ pullMuzoUserData }) => {
-                  pullMuzoUserData();
-                });
-              }}
-            ></i>
-          </Show>
-
           <i
             aria-label={t('hub_subfeed')}
             class={`ri-tv-${showSubFeed() ? 'fill' : 'line'}`}
+
             onclick={() => {
               setShowSubFeed(!showSubFeed());
               if (showSubFeed()) setShowGallery(false);

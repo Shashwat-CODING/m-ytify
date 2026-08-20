@@ -12,20 +12,27 @@ export interface PrimaryStreamData {
 export async function fetchPrimaryStream(rawId: string, signal?: AbortSignal): Promise<PrimaryStreamData | null> {
   if (!rawId) return null;
   const id = rawId.length > 11 ? rawId.slice(0, 11) : rawId;
-  try {
-    const res = await fetch(`https://shashwatidr-filestore.hf.space/api/stream?id=${encodeURIComponent(id)}`, {
-      signal
-    });
-    if (!res.ok) return null;
-    const data: PrimaryStreamData = await res.json();
-    if (data && (data.url || data.lossless)) {
-      return data;
+  const endpoints = [
+    `https://mlc-ytify.kouzu.in/api/stream?id=${encodeURIComponent(id)}`,
+    `https://shashwatidr-filestore.hf.space/api/stream?id=${encodeURIComponent(id)}`
+  ];
+
+
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint, { signal });
+      if (!res.ok) continue;
+      const data: PrimaryStreamData = await res.json();
+      if (data && (data.url || data.lossless)) {
+        return data;
+      }
+    } catch {
+      continue;
     }
-    return null;
-  } catch {
-    return null;
   }
+  return null;
 }
+
 
 export async function playPrimaryStream(streamData: PrimaryStreamData, forceLossless?: boolean): Promise<boolean> {
   const { audio } = playerStore;

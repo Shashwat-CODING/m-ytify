@@ -1,6 +1,6 @@
 import { createSignal, For, Show, createMemo } from "solid-js";
-import { fetchCollection, getCollectionsKeys, getTracksMap, drawer } from "@utils";
-import { t, setListStore, setNavStore } from "@stores";
+import { fetchCollection, getCollectionsKeys, getTracksMap } from "@utils";
+import { t } from "@stores";
 import StreamItem from "@components/StreamItem";
 
 export default function() {
@@ -110,44 +110,8 @@ export default function() {
 
           </For>
         </Show>
-        <a
-          class='clxn_item'
-          onclick={() => {
-            const { libraryPlays } = drawer;
-            const tracks = getTracksMap();
-            const frequentlyPlayedItems = Object.keys(libraryPlays)
-              .filter(id => libraryPlays[id] > 1 && tracks[id])
-              .sort((a, b) => libraryPlays[b] - libraryPlays[a])
-              .map(id => tracks[id]);
-            setListStore({
-              name: t('hub_frequently_played'),
-              type: 'collection',
-              isShared: true,
-              list: frequentlyPlayedItems as YTItem[],
-            });
-            setNavStore('active', 'list');
-          }}
-        >
-          <i class="ri-bar-chart-2-fill"></i>
-          {t('hub_frequently_played')}
-        </a>
-        <a
-          class='clxn_item'
-          onclick={() => {
-            const discoveryItems = drawer.discovery || [];
-            setListStore({
-              name: t('hub_discovery'),
-              type: 'collection',
-              isShared: true,
-              list: discoveryItems as YTItem[],
-            });
-            setNavStore('active', 'list');
-          }}
-        >
-          <i class="ri-compass-3-fill"></i>
-          {t('hub_discovery')}
-        </a>
       </Show>
     </>
   );
 }
+

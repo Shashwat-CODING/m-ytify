@@ -1,6 +1,6 @@
 import { createRoot } from "solid-js";
 import { createStore } from "solid-js/store";
-import { navStore, params, updateParam, addToQueue, queueStore, setQueueStore, setStore, store, groupQueueByAuthor } from "@stores";
+import { navStore, params, updateParam, queueStore, setQueueStore, groupQueueByAuthor, roomStore } from "@stores";
 import { config, cssVar, themer, addToCollection, player, shuffle, streamCache } from "@utils";
 import { isQueuePrefetchActive } from "@modules/queuePrefetch";
 
@@ -142,20 +142,32 @@ createRoot(() => {
     const { stream } = playerStore;
     const { id } = stream;
 
-    if (id && historyID !== id) {
+    // Host: broadcast play event to guests
+    if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+      import('@modules/metroClient').then(({ metroClient }) => {
+        metroClient.sendPlaybackAction({
+          action: 'play',
+          track_id: stream.id,
+          position: Math.round(playerStore.audio.currentTime * 1000),
+          captured_at_server_time: Date.now() + roomStore.serverTimeOffset
+        });
+      });
+    }
+
+    // History + recommendations + auto-queue: skip when applying remote sync
+    if (!roomStore.isApplyingRemoteSync && id && historyID !== id) {
       historyID = id;
       if (config.history) {
         addToCollection('history', [{ ...playerStore.stream }]);
       }
-      if (
-        config.similarContent
-        && playerStore.isMusic
-        && !isQueuePrefetchActive()
-      ) {
+      if (!isQueuePrefetchActive()) {
         getRecommendations();
       }
+    } else if (!roomStore.isApplyingRemoteSync && id && (!queueStore.list.length || queueStore.list.length <= 1)) {
+      getRecommendations();
     }
   }
+
 
   playerStore.audio.onpause = () => {
     setPlayerStore('playbackState', 'paused');
@@ -165,7 +177,19 @@ createRoot(() => {
         m.updateMediaSessionPosition();
       });
     clearTimeout(historyTimeoutId);
+
+    // Host: broadcast pause event to guests
+    if (roomStore.status === 'connected' && roomStore.isHost && !roomStore.isApplyingRemoteSync) {
+      import('@modules/metroClient').then(({ metroClient }) => {
+        metroClient.sendPlaybackAction({
+          action: 'pause',
+          track_id: playerStore.stream.id,
+          position: Math.round(playerStore.audio.currentTime * 1000)
+        });
+      });
+    }
   };
+
   playerStore.audio.addEventListener('loadeddata', themer);
 
 
@@ -180,12 +204,13 @@ createRoot(() => {
   playerStore.audio.onloadstart = () => {
     setPlayerStore('playbackState', 'paused');
     setPlayerStore('status', '');
-    if (isPlayable) playerStore.audio.play();
+    if (isPlayable) playerStore.audio.play().catch(() => {});
 
     historyID = playerStore.stream.id;
     clearTimeout(historyTimeoutId);
     playerStore.audio.playbackRate = playerStore.playbackRate;
   }
+
 
   playerStore.audio.onwaiting = () => {
     setPlayerStore('playbackState', 'loading')
@@ -270,17 +295,10 @@ createRoot(() => {
 });
 
 async function getRecommendations() {
-
-  const currentTitle = playerStore.stream.title;
-  const title = encodeURIComponent(currentTitle);
-  const artist = encodeURIComponent(playerStore.stream.author?.slice(0, -8) ?? '');
-  fetch(`${store.api}/similar?title=${title}&artist=${artist}&limit=10`)
-    .then(res => res.json())
-    .then(data => addToQueue(data.map((item: TrackItem) => ({
-      ...item,
-      context: { src: 'queue', id: `Similar to ${currentTitle}` }
-    }))))
-    .catch(e => setStore('snackbar', `Could not get recommendations for the track: ${e.message}`));
-
-
+  if (!playerStore.stream.id) return;
+  import('@modules/relatedQueue').then(({ enqueueRelatedSongs }) => {
+    enqueueRelatedSongs(playerStore.stream.id, { skipFirst: true, silent: true });
+  }).catch(e => console.warn('Could not get related recommendations:', e));
 }
+
+

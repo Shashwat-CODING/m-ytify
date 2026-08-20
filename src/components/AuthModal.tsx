@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import { loginWithEmail, signUpWithEmail, setGuestUser, setSeenOnboarding, MuzoUser } from "@modules/muzoAuth";
 import { pullMuzoUserData } from "@modules/muzoSync";
-import { setStore, t } from "@stores";
+import { setStore, setNavStore, t } from "@stores";
 
 export default function AuthModal(props: {
   onClose: () => void;
@@ -13,6 +13,7 @@ export default function AuthModal(props: {
   const [email, setEmail] = createSignal("");
   const [password, setPassword] = createSignal("");
   const [loading, setLoading] = createSignal(false);
+  const [loadingStatus, setLoadingStatus] = createSignal("Signing in...");
   const [error, setError] = createSignal("");
   let dialogRef!: HTMLDialogElement;
 
@@ -22,6 +23,7 @@ export default function AuthModal(props: {
     setError("");
 
     setLoading(true);
+    setLoadingStatus(mode() === "signup" ? "Creating account..." : "Signing in...");
     setStore("snackbar", t("loading"));
 
     try {
@@ -38,8 +40,15 @@ export default function AuthModal(props: {
         result = await loginWithEmail(email().trim(), password());
       }
 
+      setLoadingStatus("Loading your playlists & library...");
+      try {
+        await pullMuzoUserData(true);
+      } catch (syncErr) {
+        console.warn("User data sync warning:", syncErr);
+      }
+
       setStore("snackbar", `Welcome, ${result.user.username || result.user.email}!`);
-      pullMuzoUserData();
+      setNavStore("active", "home");
       props.onClose();
     } catch (err: any) {
       setError(err.message || "Authentication failed");
@@ -52,6 +61,7 @@ export default function AuthModal(props: {
   const handleGuest = () => {
     setGuestUser(true);
     setSeenOnboarding(true);
+    setNavStore("active", "home");
     props.onClose();
   };
 
@@ -101,15 +111,19 @@ export default function AuthModal(props: {
               "font-weight": "800",
               "letter-spacing": "-0.03em"
             }}>
-              {mode() === "login" ? "Welcome Back" : "Create Account"}
+              {loading()
+                ? "Loading Account"
+                : (mode() === "login" ? "Welcome Back" : "Create Account")}
             </h3>
             <span style={{ "font-size": "0.85rem", opacity: "0.7" }}>
-              {mode() === "login"
-                ? "Sign in to sync your playlists & history."
-                : "Sign up to unlock real-time cloud sync."}
+              {loading()
+                ? loadingStatus()
+                : (mode() === "login"
+                  ? "Sign in to sync your playlists & history."
+                  : "Sign up to unlock real-time cloud sync.")}
             </span>
           </div>
-          <Show when={!props.isFirstLaunch}>
+          <Show when={!props.isFirstLaunch && !loading()}>
             <button
               type="button"
               class="ri-close-large-line"
@@ -126,116 +140,132 @@ export default function AuthModal(props: {
           </Show>
         </header>
 
-        <p style={{ margin: "0", "font-size": "var(--font-size-0)", opacity: "0.8" }}>
-          {mode() === "login"
-            ? "Sign in to sync your playlists, history, and favorites across devices."
-            : "Sign up to unlock real-time cloud sync and backup your music library."}
-        </p>
-
-        <Show when={error()}>
+        <Show when={loading()}>
           <div style={{
-            color: "var(--red-5, #ff5555)",
-            "font-size": "var(--font-size-0)",
-            padding: "var(--size-1) var(--size-2)",
-            background: "rgba(255, 80, 80, 0.1)",
-            "border-radius": "var(--roundness)"
+            display: "flex",
+            "flex-direction": "column",
+            "align-items": "center",
+            "justify-content": "center",
+            gap: "var(--size-3)",
+            padding: "var(--size-5) 0"
           }}>
-            {error()}
+            <i class="ri-loader-3-line loading-spinner" style={{ "font-size": "2.4rem", color: "var(--text)" }}></i>
+            <p style={{ margin: "0", "font-size": "0.95rem", "font-weight": "600", opacity: "0.9", "text-align": "center" }}>
+              {loadingStatus()}
+            </p>
           </div>
         </Show>
 
-        <form onsubmit={handleSubmit} style={{ display: "flex", "flex-direction": "column", gap: "var(--size-2)" }}>
-          <Show when={mode() === "signup"}>
-            <input
-              type="text"
-              placeholder="Username"
-              required
-              disabled={loading()}
-              value={username()}
-              oninput={(e) => setUsername(e.target.value)}
-              autocomplete="username"
-            />
+        <Show when={!loading()}>
+          <p style={{ margin: "0", "font-size": "var(--font-size-0)", opacity: "0.8" }}>
+            {mode() === "login"
+              ? "Sign in to sync your playlists, history, and favorites across devices."
+              : "Sign up to unlock real-time cloud sync and backup your music library."}
+          </p>
+
+          <Show when={error()}>
+            <div style={{
+              color: "var(--red-5, #ff5555)",
+              "font-size": "var(--font-size-0)",
+              padding: "var(--size-1) var(--size-2)",
+              background: "rgba(255, 80, 80, 0.1)",
+              "border-radius": "var(--roundness)"
+            }}>
+              {error()}
+            </div>
           </Show>
 
-          <input
-            type="email"
-            placeholder="Email address"
-            required
-            disabled={loading()}
-            value={email()}
-            oninput={(e) => setEmail(e.target.value)}
-            autocomplete="email"
-          />
+          <form onsubmit={handleSubmit} style={{ display: "flex", "flex-direction": "column", gap: "var(--size-2)" }}>
+            <Show when={mode() === "signup"}>
+              <input
+                type="text"
+                placeholder="Username"
+                required
+                disabled={loading()}
+                value={username()}
+                oninput={(e) => setUsername(e.target.value)}
+                autocomplete="username"
+              />
+            </Show>
 
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            disabled={loading()}
-            value={password()}
-            oninput={(e) => setPassword(e.target.value)}
-            autocomplete={mode() === "signup" ? "new-password" : "current-password"}
-          />
+            <input
+              type="email"
+              placeholder="Email address"
+              required
+              disabled={loading()}
+              value={email()}
+              oninput={(e) => setEmail(e.target.value)}
+              autocomplete="email"
+            />
 
-          <button
-            type="submit"
-            disabled={loading()}
-            style={{
-              padding: "var(--size-2)",
-              "margin-top": "var(--size-2)",
-              "background-color": "var(--text)",
-              "color": "var(--trueBg, #000)",
-              "border-radius": "var(--roundness)",
-              "font-weight": "600",
-              cursor: "pointer",
-              border: "none"
-            }}
-          >
-            {loading()
-              ? "Please wait..."
-              : (mode() === "login" ? "Sign In" : "Sign Up")}
-          </button>
-        </form>
+            <input
+              type="password"
+              placeholder="Password"
+              required
+              disabled={loading()}
+              value={password()}
+              oninput={(e) => setPassword(e.target.value)}
+              autocomplete={mode() === "signup" ? "new-password" : "current-password"}
+            />
 
-        <div style={{
-          display: "flex",
-          "justify-content": "space-between",
-          "align-items": "center",
-          "margin-top": "var(--size-1)",
-          "font-size": "var(--font-size-0)"
-        }}>
-          <button
-            type="button"
-            onclick={() => setMode(mode() === "login" ? "signup" : "login")}
-            style={{
-              background: "none",
-              border: "none",
-              color: "inherit",
-              "text-decoration": "underline",
-              cursor: "pointer",
-              padding: "0"
-            }}
-          >
-            {mode() === "login"
-              ? "Need an account? Sign up"
-              : "Already have an account? Sign in"}
-          </button>
+            <button
+              type="submit"
+              disabled={loading()}
+              style={{
+                padding: "var(--size-2)",
+                "margin-top": "var(--size-2)",
+                "background-color": "var(--text)",
+                "color": "var(--trueBg, #000)",
+                "border-radius": "var(--roundness)",
+                "font-weight": "600",
+                cursor: "pointer",
+                border: "none"
+              }}
+            >
+              {mode() === "login" ? "Sign In" : "Sign Up"}
+            </button>
+          </form>
 
-          <button
-            type="button"
-            onclick={handleGuest}
-            style={{
-              background: "none",
-              border: "none",
-              opacity: "0.85",
-              color: "inherit",
-              cursor: "pointer",
-              padding: "0"
-            }}
-          >
-            Continue as Guest &rarr;
-          </button>
-        </div>
+          <div style={{
+            display: "flex",
+            "justify-content": "space-between",
+            "align-items": "center",
+            "margin-top": "var(--size-1)",
+            "font-size": "var(--font-size-0)"
+          }}>
+            <button
+              type="button"
+              onclick={() => setMode(mode() === "login" ? "signup" : "login")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "inherit",
+                "text-decoration": "underline",
+                cursor: "pointer",
+                padding: "0"
+              }}
+            >
+              {mode() === "login"
+                ? "Need an account? Sign up"
+                : "Already have an account? Sign in"}
+            </button>
+
+            <button
+              type="button"
+              onclick={handleGuest}
+              style={{
+                background: "none",
+                border: "none",
+                opacity: "0.85",
+                color: "inherit",
+                cursor: "pointer",
+                padding: "0"
+              }}
+            >
+              Continue as Guest &rarr;
+            </button>
+          </div>
+        </Show>
 
       </div>
     </dialog>
