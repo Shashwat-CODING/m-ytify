@@ -163,6 +163,7 @@ main.app-main {
     flex: 1;
     height: 100dvh;
     width: 100%;
+    position: relative;
     overflow-y: auto;
     overflow-x: hidden;
     display: flex;

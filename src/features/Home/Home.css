@@ -210,17 +210,22 @@
 
     span {
       width: 100%;
-      margin-right: 0;
-      margin-bottom: var(--size-2);
+      height: auto;
+      margin-right: 0 !important;
+      margin-bottom: var(--size-2) !important;
+      display: block;
+      position: relative;
 
       img {
-        width: 100%;
-        max-width: 100%;
-        height: auto;
-        aspect-ratio: 1;
-        object-fit: cover;
-        border-radius: 0.9rem;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        width: 100% !important;
+        max-width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
+        aspect-ratio: 1 / 1 !important;
+        object-fit: cover !important;
+        display: block !important;
+        border-radius: 0.9rem !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
       }
 
       .duration {

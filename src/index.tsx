@@ -56,6 +56,10 @@ export default function App() {
           <Show when={navStore.active === 'library'}><Library /></Show>
           <Show when={navStore.active === 'list'}><List /></Show>
           <Show when={navStore.active === 'settings'}><Settings /></Show>
+
+          <footer class="navbar-floating-container">
+            <NavBar />
+          </footer>
         </div>
 
         <Show when={navStore.player.state}>
@@ -69,9 +73,6 @@ export default function App() {
           <MiniPlayer />
         </div>
       </Show>
-      <footer class="navbar-floating-container">
-        <NavBar />
-      </footer>
       <Show when={store.actionsMenu?.id}>
         <ActionsMenu />
       </Show>
